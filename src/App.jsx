@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+
+const API_URL = 'http://localhost:5000/api';
 
 const initialInventory = [
   { type: 'A+', units: 10 },
@@ -11,51 +14,81 @@ function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [users, setUsers] = useState([]);
   const [inventory, setInventory] = useState(initialInventory);
   const [donations, setDonations] = useState([]);
   const [requests, setRequests] = useState([]);
   const [loginData, setLoginData] = useState({ email: '', password: '', role: '' });
   const [error, setError] = useState('');
 
-  const handleRegister = (e) => {
-    e.preventDefault();
-    if (!loginData.email || !loginData.password || !loginData.role) {
-      setError('Please fill in all fields');
-      return;
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      const role = localStorage.getItem('role');
+      setIsLoggedIn(true);
+      setCurrentUser({ role });
+      fetchUserData(role);
     }
-    const userExists = users.find(user => user.email === loginData.email);
-    if (userExists) {
-      setError('User already exists');
-      return;
+  }, []);
+
+  const fetchUserData = async (role) => {
+    const token = localStorage.getItem('token');
+    try {
+      if (role === 'donor') {
+        const response = await axios.get(`${API_URL}/donors/my-donations`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setDonations(response.data);
+      } else if (role === 'hospital') {
+        const response = await axios.get(`${API_URL}/hospitals/my-requests`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setRequests(response.data);
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
     }
-    setUsers([...users, loginData]);
-    setIsRegistering(false);
-    setError('');
-    setLoginData({ email: '', password: '', role: '' });
   };
 
-  const handleLogin = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    const user = users.find(
-      u =>
-        u.email === loginData.email &&
-        u.password === loginData.password &&
-        u.role === loginData.role
-    );
-    if (user) {
-      setCurrentUser(user);
+    try {
+      const response = await axios.post(`${API_URL}/auth/register`, loginData);
+      const { token, role } = response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('role', role);
+      setCurrentUser({ role });
       setIsLoggedIn(true);
       setError('');
-    } else {
-      setError('Invalid credentials');
+      fetchUserData(role);
+    } catch (error) {
+      setError(error.response?.data?.message || 'Registration failed');
+    }
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.post(`${API_URL}/auth/login`, loginData);
+      const { token, role } = response.data;
+      localStorage.setItem('token', token);
+      localStorage.setItem('role', role);
+      setCurrentUser({ role });
+      setIsLoggedIn(true);
+      setError('');
+      fetchUserData(role);
+    } catch (error) {
+      setError(error.response?.data?.message || 'Login failed');
     }
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
     setIsLoggedIn(false);
     setCurrentUser(null);
     setLoginData({ email: '', password: '', role: '' });
+    setDonations([]);
+    setRequests([]);
   };
 
   const AuthForm = () => (
@@ -107,70 +140,93 @@ function App() {
     </div>
   );
 
-  const AdminDashboard = () => (
-    <div className="dashboard">
-      <h2>Admin Dashboard</h2>
-      <div className="card">
-        <h3>Blood Inventory</h3>
-        <div className="grid">
-          {inventory.map((item, index) => (
-            <div key={index} className="inventory-item">
-              <h4>{item.type}</h4>
-              <p>{item.units} units</p>
-            </div>
-          ))}
+  const AdminDashboard = () => {
+    const [allDonors, setAllDonors] = useState([]);
+    const [allHospitals, setAllHospitals] = useState([]);
+
+    useEffect(() => {
+      const fetchAdminData = async () => {
+        const token = localStorage.getItem('token');
+        try {
+          const [donorsRes, hospitalsRes] = await Promise.all([
+            axios.get(`${API_URL}/donors`, {
+              headers: { Authorization: `Bearer ${token}` }
+            }),
+            axios.get(`${API_URL}/hospitals`, {
+              headers: { Authorization: `Bearer ${token}` }
+            })
+          ]);
+          setAllDonors(donorsRes.data);
+          setAllHospitals(hospitalsRes.data);
+        } catch (error) {
+          console.error('Error fetching admin data:', error);
+        }
+      };
+      fetchAdminData();
+    }, []);
+
+    return (
+      <div className="dashboard">
+        <h2>Admin Dashboard</h2>
+        <div className="card">
+          <h3>Blood Inventory</h3>
+          <div className="grid">
+            {inventory.map((item, index) => (
+              <div key={index} className="inventory-item">
+                <h4>{item.type}</h4>
+                <p>{item.units} units</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="card">
+          <h3>All Donors</h3>
+          <div className="list">
+            {allDonors.map((donor, index) => (
+              <div key={index} className="list-item">
+                <p>Email: {donor.userId.email}</p>
+                <p>Total Donations: {donor.donations.length}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="card">
+          <h3>All Hospitals</h3>
+          <div className="list">
+            {allHospitals.map((hospital, index) => (
+              <div key={index} className="list-item">
+                <p>Email: {hospital.userId.email}</p>
+                <p>Total Requests: {hospital.requests.length}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-      <div className="card">
-        <h3>Donation Records</h3>
-        <div className="list">
-          {donations.map((donation, index) => (
-            <div key={index} className="list-item">
-              <p>Donor: {donation.donorEmail}</p>
-              <p>Type: {donation.bloodType} - Units: {donation.units}</p>
-              <p>Date: {donation.date}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="card">
-        <h3>Blood Requests</h3>
-        <div className="list">
-          {requests.map((request, index) => (
-            <div key={index} className="list-item">
-              <p>Hospital: {request.hospitalEmail}</p>
-              <p>Type: {request.bloodType} - Units: {request.units}</p>
-              <p>Status: {request.status}</p>
-              <p>Date: {request.date}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const DonorDashboard = () => {
     const [newDonation, setNewDonation] = useState({ bloodType: '', units: '' });
 
-    const handleDonation = (e) => {
+    const handleDonation = async (e) => {
       e.preventDefault();
       if (!newDonation.bloodType || !newDonation.units) {
         setError('Please fill in all fields');
         return;
       }
-      const donation = {
-        ...newDonation,
-        donorEmail: currentUser?.email || '',
-        date: new Date().toLocaleDateString(),
-      };
-      setDonations([...donations, donation]);
-      setInventory(inventory.map(item =>
-        item.type === newDonation.bloodType
-          ? { ...item, units: item.units + Number(newDonation.units) }
-          : item
-      ));
-      setNewDonation({ bloodType: '', units: '' });
-      setError('');
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.post(
+          `${API_URL}/donors/donate`,
+          newDonation,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setDonations(response.data);
+        setNewDonation({ bloodType: '', units: '' });
+        setError('');
+      } catch (error) {
+        setError(error.response?.data?.message || 'Failed to submit donation');
+      }
     };
 
     return (
@@ -208,14 +264,12 @@ function App() {
         <div className="card">
           <h3>My Donation History</h3>
           <div className="list">
-            {donations
-              .filter(donation => donation.donorEmail === currentUser?.email)
-              .map((donation, index) => (
-                <div key={index} className="list-item">
-                  <p>Type: {donation.bloodType} - Units: {donation.units}</p>
-                  <p>Date: {donation.date}</p>
-                </div>
-              ))}
+            {donations.map((donation, index) => (
+              <div key={index} className="list-item">
+                <p>Type: {donation.bloodType} - Units: {donation.units}</p>
+                <p>Date: {new Date(donation.date).toLocaleDateString()}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
@@ -225,21 +279,25 @@ function App() {
   const HospitalDashboard = () => {
     const [newRequest, setNewRequest] = useState({ bloodType: '', units: '' });
 
-    const handleRequest = (e) => {
+    const handleRequest = async (e) => {
       e.preventDefault();
       if (!newRequest.bloodType || !newRequest.units) {
         setError('Please fill in all fields');
         return;
       }
-      const request = {
-        ...newRequest,
-        hospitalEmail: currentUser?.email || '',
-        status: 'Pending',
-        date: new Date().toLocaleDateString(),
-      };
-      setRequests([...requests, request]);
-      setNewRequest({ bloodType: '', units: '' });
-      setError('');
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.post(
+          `${API_URL}/hospitals/request`,
+          newRequest,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        setRequests(response.data);
+        setNewRequest({ bloodType: '', units: '' });
+        setError('');
+      } catch (error) {
+        setError(error.response?.data?.message || 'Failed to submit request');
+      }
     };
 
     return (
@@ -277,15 +335,13 @@ function App() {
         <div className="card">
           <h3>My Requests</h3>
           <div className="list">
-            {requests
-              .filter(request => request.hospitalEmail === currentUser?.email)
-              .map((request, index) => (
-                <div key={index} className="list-item">
-                  <p>Type: {request.bloodType} - Units: {request.units}</p>
-                  <p>Status: {request.status}</p>
-                  <p>Date: {request.date}</p>
-                </div>
-              ))}
+            {requests.map((request, index) => (
+              <div key={index} className="list-item">
+                <p>Type: {request.bloodType} - Units: {request.units}</p>
+                <p>Status: {request.status}</p>
+                <p>Date: {new Date(request.date).toLocaleDateString()}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
