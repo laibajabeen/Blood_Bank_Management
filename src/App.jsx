@@ -107,7 +107,7 @@ function App() {
     </div>
   );
 
-  const AdminDashboard = () => (
+  /*/const AdminDashboard = () => (
     <div className="dashboard">
       <h2>Admin Dashboard</h2>
       <div className="card">
@@ -147,7 +147,142 @@ function App() {
         </div>
       </div>
     </div>
+  );/*/
+
+  
+
+const AdminDashboard = () => {
+  // Dummy data for your existing lists
+  const inventory = [
+    { type: 'A+', units: 10 },
+    { type: 'B-', units: 5 },
+    { type: 'O+', units: 8 },
+  ];
+
+  const donations = [
+    { donorEmail: 'donor1@example.com', bloodType: 'A+', units: 2, date: '2024-05-10' },
+    { donorEmail: 'donor2@example.com', bloodType: 'O-', units: 1, date: '2024-05-12' },
+  ];
+
+  const requests = [
+    { hospitalEmail: 'hospital1@example.com', bloodType: 'B+', units: 3, status: 'Pending', date: '2024-05-14' },
+    { hospitalEmail: 'hospital2@example.com', bloodType: 'A-', units: 4, status: 'Completed', date: '2024-05-15' },
+  ];
+
+  // Dummy patients data for search feature
+  const patients = [
+    { id: 'P001', name: 'John Doe', bloodType: 'A+', contact: '123-456-7890' },
+    { id: 'P002', name: 'Jane Smith', bloodType: 'O-', contact: '987-654-3210' },
+    { id: 'P003', name: 'Alice Johnson', bloodType: 'B+', contact: '555-123-4567' },
+  ];
+
+  // State for search input and found patient
+  const [searchId, setSearchId] = useState('');
+  const [foundPatient, setFoundPatient] = useState(null);
+
+  // Search function
+  const handleSearch = () => {
+    const patient = patients.find(p => p.id.toLowerCase() === searchId.toLowerCase());
+    if (patient) {
+      setFoundPatient(patient);
+    } else {
+      setFoundPatient(null);
+      alert('Patient not found');
+    }
+  };
+
+  // Button handlers
+  const handleUpdate = () => alert(`Update clicked for patient: ${foundPatient?.id}`);
+  const handleDelete = () => alert(`Delete clicked for patient: ${foundPatient?.id}`);
+  const handleRead = () => alert(`Read clicked for patient: ${foundPatient?.id}`);
+
+  return (
+    <div className="dashboard" style={{ padding: '20px', maxWidth: '800px', margin: 'auto' }}>
+      <h2>Admin Dashboard</h2>
+
+      {/* Search bar */}
+      <div style={{ marginBottom: '30px' }}>
+        <input
+          type="text"
+          placeholder="Enter patient ID"
+          value={searchId}
+          onChange={(e) => setSearchId(e.target.value)}
+          style={{ padding: '8px', fontSize: '16px', width: '60%', marginRight: '10px' }}
+        />
+        <button onClick={handleSearch} style={{ padding: '8px 16px', fontSize: '16px' }}>Search</button>
+      </div>
+
+      {/* Patient record display */}
+      {foundPatient && (
+        <div
+          style={{
+            border: '1px solid #ccc',
+            padding: '15px',
+            borderRadius: '5px',
+            marginBottom: '30px',
+            backgroundColor: '#f9f9f9',
+          }}
+        >
+          <h3>Patient Record</h3>
+          <p><strong>ID:</strong> {foundPatient.id}</p>
+          <p><strong>Name:</strong> {foundPatient.name}</p>
+          <p><strong>Blood Type:</strong> {foundPatient.bloodType}</p>
+          <p><strong>Contact:</strong> {foundPatient.contact}</p>
+
+          <div style={{ marginTop: '10px' }}>
+            <button onClick={handleUpdate} style={{ marginRight: '10px' }}>Update</button>
+            <button onClick={handleDelete} style={{ marginRight: '10px' }}>Delete</button>
+            <button onClick={handleRead}>Read</button>
+          </div>
+        </div>
+      )}
+
+      {/* Existing inventory card */}
+      <div className="card" style={{ marginBottom: '20px' }}>
+        <h3>Blood Inventory</h3>
+        <div className="grid" style={{ display: 'flex', gap: '15px' }}>
+          {inventory.map((item, index) => (
+            <div key={index} className="inventory-item" style={{ border: '1px solid #ddd', padding: '10px', borderRadius: '5px', flex: 1 }}>
+              <h4>{item.type}</h4>
+              <p>{item.units} units</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Donation Records */}
+      <div className="card" style={{ marginBottom: '20px' }}>
+        <h3>Donation Records</h3>
+        <div className="list" style={{ maxHeight: '150px', overflowY: 'auto' }}>
+          {donations.map((donation, index) => (
+            <div key={index} className="list-item" style={{ borderBottom: '1px solid #eee', padding: '10px 0' }}>
+              <p><strong>Donor:</strong> {donation.donorEmail}</p>
+              <p><strong>Type:</strong> {donation.bloodType} - <strong>Units:</strong> {donation.units}</p>
+              <p><strong>Date:</strong> {donation.date}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Blood Requests */}
+      <div className="card" style={{ marginBottom: '20px' }}>
+        <h3>Blood Requests</h3>
+        <div className="list" style={{ maxHeight: '150px', overflowY: 'auto' }}>
+          {requests.map((request, index) => (
+            <div key={index} className="list-item" style={{ borderBottom: '1px solid #eee', padding: '10px 0' }}>
+              <p><strong>Hospital:</strong> {request.hospitalEmail}</p>
+              <p><strong>Type:</strong> {request.bloodType} - <strong>Units:</strong> {request.units}</p>
+              <p><strong>Status:</strong> {request.status}</p>
+              <p><strong>Date:</strong> {request.date}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
   );
+};
+
+
 
  const DonorDashboard = () => {
   const [newDonation, setNewDonation] = useState({ name: '', cnic: '', bloodType: '', units: '' });
