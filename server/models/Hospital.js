@@ -14,15 +14,6 @@ const hospitalSchema = new mongoose.Schema({
     units: {
       type: Number,
       required: true
-    },
-    status: {
-      type: String,
-      enum: ['Pending', 'Approved', 'Rejected'],
-      default: 'Pending'
-    },
-    date: {
-      type: Date,
-      default: Date.now
     }
   }]
 });

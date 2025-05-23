@@ -6,20 +6,30 @@ const donorSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
-  donations: [{
-    bloodType: {
-      type: String,
-      required: true
-    },
-    units: {
-      type: Number,
-      required: true
-    },
-    date: {
-      type: Date,
-      default: Date.now
+  donations: [
+    {
+      name: {
+        type: String,
+        required: true
+      },
+      cnic: {
+        type: String,
+        required: true
+      },
+      bloodType: {
+        type: String,
+        required: true
+      },
+      units: {
+        type: Number,
+        required: true
+      },
+      date: {
+        type: Date,
+        default: Date.now
+      }
     }
-  }]
+  ]
 });
 
 export default mongoose.model('Donor', donorSchema);

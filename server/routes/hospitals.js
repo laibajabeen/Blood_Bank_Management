@@ -1,15 +1,11 @@
 import express from 'express';
 import Hospital from '../models/Hospital.js';
-import auth from '../middleware/auth.js';
 
 const router = express.Router();
 
-// Get all hospitals (admin only)
-router.get('/', auth, async (req, res) => {
+// Get all hospitals (now public, no admin check)
+router.get('/', async (req, res) => {
   try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Not authorized' });
-    }
     const hospitals = await Hospital.find().populate('userId', 'email');
     res.json(hospitals);
   } catch (error) {
@@ -17,10 +13,15 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
-// Get hospital's requests
-router.get('/my-requests', auth, async (req, res) => {
+// Get hospital's requests — now expects userId as query parameter
+router.get('/my-requests', async (req, res) => {
   try {
-    const hospital = await Hospital.findOne({ userId: req.user.userId });
+    const { userId } = req.query;
+    if (!userId) {
+      return res.status(400).json({ message: 'userId query parameter required' });
+    }
+
+    const hospital = await Hospital.findOne({ userId });
     if (!hospital) {
       return res.status(404).json({ message: 'Hospital not found' });
     }
@@ -30,15 +31,19 @@ router.get('/my-requests', auth, async (req, res) => {
   }
 });
 
-// Add new blood request
-router.post('/request', auth, async (req, res) => {
+// Add new blood request — now expects userId in request body
+router.post('/request', async (req, res) => {
   try {
-    const { bloodType, units } = req.body;
-    let hospital = await Hospital.findOne({ userId: req.user.userId });
+    const { userId, bloodType, units } = req.body;
+    if (!userId) {
+      return res.status(400).json({ message: 'userId is required' });
+    }
+
+    let hospital = await Hospital.findOne({ userId });
 
     if (!hospital) {
       hospital = new Hospital({
-        userId: req.user.userId,
+        userId,
         requests: []
       });
     }
