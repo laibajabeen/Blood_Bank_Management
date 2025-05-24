@@ -107,49 +107,6 @@ function App() {
     </div>
   );
 
-  /*/const AdminDashboard = () => (
-    <div className="dashboard">
-      <h2>Admin Dashboard</h2>
-      <div className="card">
-        <h3>Blood Inventory</h3>
-        <div className="grid">
-          {inventory.map((item, index) => (
-            <div key={index} className="inventory-item">
-              <h4>{item.type}</h4>
-              <p>{item.units} units</p>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="card">
-        <h3>Donation Records</h3>
-        <div className="list">
-          {donations.map((donation, index) => (
-            <div key={index} className="list-item">
-              <p>Donor: {donation.donorEmail}</p>
-              <p>Type: {donation.bloodType} - Units: {donation.units}</p>
-              <p>Date: {donation.date}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="card">
-        <h3>Blood Requests</h3>
-        <div className="list">
-          {requests.map((request, index) => (
-            <div key={index} className="list-item">
-              <p>Hospital: {request.hospitalEmail}</p>
-              <p>Type: {request.bloodType} - Units: {request.units}</p>
-              <p>Status: {request.status}</p>
-              <p>Date: {request.date}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );/*/
-
-  
 
 const AdminDashboard = () => {
   // Dummy data for your existing lists
