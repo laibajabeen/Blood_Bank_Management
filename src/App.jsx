@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from './axiosConfig';
+
 
 const initialInventory = [
   { type: 'A+', units: 10 },
