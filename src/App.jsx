@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
+import axios from './axiosConfig';
+
 const initialInventory = [
   { type: 'A+', units: 10 },
   { type: 'B+', units: 8 },
@@ -18,37 +19,28 @@ function App() {
   const [loginData, setLoginData] = useState({ email: '', password: '', role: '' });
   const [error, setError] = useState('');
 
-  const handleRegister = (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
-    if (!loginData.email || !loginData.password || !loginData.role) {
-      setError('Please fill in all fields');
-      return;
+    try {
+      const response = await axios.post('/auth/register', loginData);
+      setIsRegistering(false);
+      setError('');
+      setLoginData({ email: '', password: '', role: '' });
+      alert('Registration successful!');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Registration failed');
     }
-    const userExists = users.find(user => user.email === loginData.email);
-    if (userExists) {
-      setError('User already exists');
-      return;
-    }
-    setUsers([...users, loginData]);
-    setIsRegistering(false);
-    setError('');
-    setLoginData({ email: '', password: '', role: '' });
   };
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    const user = users.find(
-      u =>
-        u.email === loginData.email &&
-        u.password === loginData.password &&
-        u.role === loginData.role
-    );
-    if (user) {
-      setCurrentUser(user);
+    try {
+      const response = await axios.post('/auth/login', loginData);
+      setCurrentUser({ ...loginData, id: response.data.userId });
       setIsLoggedIn(true);
       setError('');
-    } else {
-      setError('Invalid credentials');
+    } catch (err) {
+      setError(err.response?.data?.message || 'Login failed');
     }
   };
 
@@ -107,262 +99,302 @@ function App() {
     </div>
   );
 
+  const AdminDashboard = () => {
+    const [users, setUsers] = useState([]);
+    const [donations, setDonations] = useState([]);
+    const [editingUser, setEditingUser] = useState(null);
+    const [editingDonation, setEditingDonation] = useState(null);
+    const [newUser, setNewUser] = useState({ email: '', password: '', role: '' });
+    const [searchId, setSearchId] = useState('');
 
-const AdminDashboard = () => {
-  // Dummy data for your existing lists
-  const inventory = [
-    { type: 'A+', units: 10 },
-    { type: 'B-', units: 5 },
-    { type: 'O+', units: 8 },
-  ];
+    useEffect(() => {
+      fetchUsers();
+      fetchDonations();
+    }, []);
 
-  const donations = [
-    { donorEmail: 'donor1@example.com', bloodType: 'A+', units: 2, date: '2024-05-10' },
-    { donorEmail: 'donor2@example.com', bloodType: 'O-', units: 1, date: '2024-05-12' },
-  ];
-
-  const requests = [
-    { hospitalEmail: 'hospital1@example.com', bloodType: 'B+', units: 3, status: 'Pending', date: '2024-05-14' },
-    { hospitalEmail: 'hospital2@example.com', bloodType: 'A-', units: 4, status: 'Completed', date: '2024-05-15' },
-  ];
-
-  // Dummy patients data for search feature
-  const patients = [
-    { id: 'P001', name: 'John Doe', bloodType: 'A+', contact: '123-456-7890' },
-    { id: 'P002', name: 'Jane Smith', bloodType: 'O-', contact: '987-654-3210' },
-    { id: 'P003', name: 'Alice Johnson', bloodType: 'B+', contact: '555-123-4567' },
-  ];
-
-  // State for search input and found patient
-  const [searchId, setSearchId] = useState('');
-  const [foundPatient, setFoundPatient] = useState(null);
-
-  // Search function
-  const handleSearch = () => {
-    const patient = patients.find(p => p.id.toLowerCase() === searchId.toLowerCase());
-    if (patient) {
-      setFoundPatient(patient);
-    } else {
-      setFoundPatient(null);
-      alert('Patient not found');
-    }
-  };
-
-  // Button handlers
-  const handleUpdate = () => alert(`Update clicked for patient: ${foundPatient?.id}`);
-  const handleDelete = () => alert(`Delete clicked for patient: ${foundPatient?.id}`);
-  const handleRead = () => alert(`Read clicked for patient: ${foundPatient?.id}`);
-
-  return (
-    <div className="dashboard" style={{ padding: '20px', maxWidth: '800px', margin: 'auto' }}>
-      <h2>Admin Dashboard</h2>
-
-      {/* Search bar */}
-      <div style={{ marginBottom: '30px' }}>
-        <input
-          type="text"
-          placeholder="Enter patient ID"
-          value={searchId}
-          onChange={(e) => setSearchId(e.target.value)}
-          style={{ padding: '8px', fontSize: '16px', width: '60%', marginRight: '10px' }}
-        />
-        <button onClick={handleSearch} style={{ padding: '8px 16px', fontSize: '16px' }}>Search</button>
-      </div>
-
-      {/* Patient record display */}
-      {foundPatient && (
-        <div
-          style={{
-            border: '1px solid #ccc',
-            padding: '15px',
-            borderRadius: '5px',
-            marginBottom: '30px',
-            backgroundColor: '#f9f9f9',
-          }}
-        >
-          <h3>Patient Record</h3>
-          <p><strong>ID:</strong> {foundPatient.id}</p>
-          <p><strong>Name:</strong> {foundPatient.name}</p>
-          <p><strong>Blood Type:</strong> {foundPatient.bloodType}</p>
-          <p><strong>Contact:</strong> {foundPatient.contact}</p>
-
-          <div style={{ marginTop: '10px' }}>
-            <button onClick={handleUpdate} style={{ marginRight: '10px' }}>Update</button>
-            <button onClick={handleDelete} style={{ marginRight: '10px' }}>Delete</button>
-            <button onClick={handleRead}>Read</button>
-          </div>
-        </div>
-      )}
-
-      {/* Existing inventory card */}
-      <div className="card" style={{ marginBottom: '20px' }}>
-        <h3>Blood Inventory</h3>
-        <div className="grid" style={{ display: 'flex', gap: '15px' }}>
-          {inventory.map((item, index) => (
-            <div key={index} className="inventory-item" style={{ border: '1px solid #ddd', padding: '10px', borderRadius: '5px', flex: 1 }}>
-              <h4>{item.type}</h4>
-              <p>{item.units} units</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Donation Records */}
-      <div className="card" style={{ marginBottom: '20px' }}>
-        <h3>Donation Records</h3>
-        <div className="list" style={{ maxHeight: '150px', overflowY: 'auto' }}>
-          {donations.map((donation, index) => (
-            <div key={index} className="list-item" style={{ borderBottom: '1px solid #eee', padding: '10px 0' }}>
-              <p><strong>Donor:</strong> {donation.donorEmail}</p>
-              <p><strong>Type:</strong> {donation.bloodType} - <strong>Units:</strong> {donation.units}</p>
-              <p><strong>Date:</strong> {donation.date}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Blood Requests */}
-      <div className="card" style={{ marginBottom: '20px' }}>
-        <h3>Blood Requests</h3>
-        <div className="list" style={{ maxHeight: '150px', overflowY: 'auto' }}>
-          {requests.map((request, index) => (
-            <div key={index} className="list-item" style={{ borderBottom: '1px solid #eee', padding: '10px 0' }}>
-              <p><strong>Hospital:</strong> {request.hospitalEmail}</p>
-              <p><strong>Type:</strong> {request.bloodType} - <strong>Units:</strong> {request.units}</p>
-              <p><strong>Status:</strong> {request.status}</p>
-              <p><strong>Date:</strong> {request.date}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-
-
- const DonorDashboard = () => {
-  const [newDonation, setNewDonation] = useState({ name: '', cnic: '', bloodType: '', units: '' });
-  const [error, setError] = useState('');
-  const [donations, setDonations] = useState([]);
-  const [inventory, setInventory] = useState([]);
-  const currentUser = { email: 'example@example.com' }; // Just an example, replace with your auth
-
-  const handleDonation = (e) => {
-    e.preventDefault();
-    // Validate all fields including name and cnic
-    if (!newDonation.name || !newDonation.cnic || !newDonation.bloodType || !newDonation.units) {
-      setError('Please fill in all fields');
-      return;
-    }
-    // Optionally validate CNIC format here (like length or pattern)
-
-    const donation = {
-      ...newDonation,
-      donorEmail: currentUser?.email || '',
-      date: new Date().toLocaleDateString(),
+    const fetchUsers = async () => {
+      try {
+        const response = await axios.get('/auth/users');
+        setUsers(response.data);
+      } catch (err) {
+        console.error('Error fetching users:', err);
+      }
     };
-    setDonations([...donations, donation]);
-    setInventory(inventory.map(item =>
-      item.type === newDonation.bloodType
-        ? { ...item, units: item.units + Number(newDonation.units) }
-        : item
-    ));
-    setNewDonation({ name: '', cnic: '', bloodType: '', units: '' });
-    setError('');
+
+    const fetchDonations = async () => {
+      try {
+        const response = await axios.get('/donors');
+        setDonations(response.data);
+      } catch (err) {
+        console.error('Error fetching donations:', err);
+      }
+    };
+
+    const handleUpdateUser = async (userId) => {
+      try {
+        await axios.put(`/auth/users/${userId}`, editingUser);
+        setEditingUser(null);
+        fetchUsers();
+      } catch (err) {
+        console.error('Error updating user:', err);
+      }
+    };
+
+    const handleDeleteUser = async (userId) => {
+      try {
+        await axios.delete(`/auth/users/${userId}`);
+        fetchUsers();
+      } catch (err) {
+        console.error('Error deleting user:', err);
+      }
+    };
+
+    const handleUpdateDonation = async (donationId) => {
+      try {
+        await axios.put(`/donors/donate`, editingDonation);
+        setEditingDonation(null);
+        fetchDonations();
+      } catch (err) {
+        console.error('Error updating donation:', err);
+      }
+    };
+
+    const handleDeleteDonation = async (donationId) => {
+      try {
+        await axios.delete(`/donors/donate/${donationId}`);
+        fetchDonations();
+      } catch (err) {
+        console.error('Error deleting donation:', err);
+      }
+    };
+
+    return (
+      <div className="dashboard" style={{ padding: '20px', maxWidth: '800px', margin: 'auto' }}>
+        <h2>Admin Dashboard</h2>
+
+        {/* Users Management */}
+        <div className="card">
+          <h3>Users Management</h3>
+          <div className="list">
+            {users.map((user) => (
+              <div key={user._id} className="list-item">
+                {editingUser && editingUser._id === user._id ? (
+                  <div>
+                    <input
+                      type="email"
+                      value={editingUser.email}
+                      onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                    />
+                    <select
+                      value={editingUser.role}
+                      onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
+                    >
+                      <option value="admin">Admin</option>
+                      <option value="donor">Donor</option>
+                      <option value="hospital">Hospital</option>
+                    </select>
+                    <button onClick={() => handleUpdateUser(user._id)}>Save</button>
+                    <button onClick={() => setEditingUser(null)}>Cancel</button>
+                  </div>
+                ) : (
+                  <div>
+                    <p>Email: {user.email}</p>
+                    <p>Role: {user.role}</p>
+                    <button onClick={() => setEditingUser(user)}>Edit</button>
+                    <button onClick={() => handleDeleteUser(user._id)}>Delete</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Donations Management */}
+        <div className="card">
+          <h3>Donations Management</h3>
+          <div className="list">
+            {donations.map((donation) => (
+              <div key={donation._id} className="list-item">
+                {editingDonation && editingDonation._id === donation._id ? (
+                  <div>
+                    <input
+                      type="text"
+                      value={editingDonation.name}
+                      onChange={(e) => setEditingDonation({ ...editingDonation, name: e.target.value })}
+                    />
+                    <input
+                      type="text"
+                      value={editingDonation.bloodType}
+                      onChange={(e) => setEditingDonation({ ...editingDonation, bloodType: e.target.value })}
+                    />
+                    <input
+                      type="number"
+                      value={editingDonation.units}
+                      onChange={(e) => setEditingDonation({ ...editingDonation, units: e.target.value })}
+                    />
+                    <button onClick={() => handleUpdateDonation(donation._id)}>Save</button>
+                    <button onClick={() => setEditingDonation(null)}>Cancel</button>
+                  </div>
+                ) : (
+                  <div>
+                    <p>Name: {donation.name}</p>
+                    <p>Blood Type: {donation.bloodType}</p>
+                    <p>Units: {donation.units}</p>
+                    <button onClick={() => setEditingDonation(donation)}>Edit</button>
+                    <button onClick={() => handleDeleteDonation(donation._id)}>Delete</button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
   };
 
-  return (
-    <div className="dashboard">
-      <h2>Donor Dashboard</h2>
-      <div className="card">
-        <h3>Register New Donation</h3>
-        <form onSubmit={handleDonation}>
-          <div className="form-group">
-            <label>Name:</label>
-            <input
-              type="text"
-              value={newDonation.name}
-              onChange={(e) => setNewDonation({ ...newDonation, name: e.target.value })}
-            />
-          </div>
-          <div className="form-group">
-            <label>CNIC:</label>
-            <input
-              type="text"
-              value={newDonation.cnic}
-              onChange={(e) => setNewDonation({ ...newDonation, cnic: e.target.value })}
-              maxLength={15} // Optional: limit length for CNIC
-              placeholder="12345-1234567-1"
-            />
-          </div>
-          <div className="form-group">
-            <label>Blood Type:</label>
-            <select
-              value={newDonation.bloodType}
-              onChange={(e) => setNewDonation({ ...newDonation, bloodType: e.target.value })}
-            >
-              <option value="">Select Blood Type</option>
-              <option value="A+">A+</option>
-              <option value="B+">B+</option>
-              <option value="O+">O+</option>
-              <option value="AB+">AB+</option>
-               <option value="A-">A-</option>
-              <option value="B-">B-</option>
-              <option value="O-">O-</option>
-              <option value="AB-">AB-</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label>Units:</label>
-            <input
-              type="number"
-              value={newDonation.units}
-              onChange={(e) => setNewDonation({ ...newDonation, units: e.target.value })}
-              min="1"
-            />
-          </div>
-          {error && <div className="error">{error}</div>}
-          <button type="submit" className="btn primary-btn">Submit Donation</button>
-        </form>
-      </div>
-      <div className="card">
-        <h3>My Donation History</h3>
-        <div className="list">
-          {donations
-            .filter(donation => donation.donorEmail === currentUser?.email)
-            .map((donation, index) => (
+  const DonorDashboard = () => {
+    const [newDonation, setNewDonation] = useState({ name: '', cnic: '', bloodType: '', units: '' });
+    const [error, setError] = useState('');
+    const [donations, setDonations] = useState([]);
+
+    useEffect(() => {
+      fetchDonations();
+    }, []);
+
+    const fetchDonations = async () => {
+      try {
+        const response = await axios.get(`/donors/my-donations?userId=${currentUser.id}`);
+        setDonations(response.data);
+      } catch (err) {
+        console.error('Error fetching donations:', err);
+      }
+    };
+
+    const handleDonation = async (e) => {
+      e.preventDefault();
+      if (!newDonation.name || !newDonation.cnic || !newDonation.bloodType || !newDonation.units) {
+        setError('Please fill in all fields');
+        return;
+      }
+
+      try {
+        await axios.post('/donors/donate', {
+          ...newDonation,
+          userId: currentUser.id
+        });
+        setNewDonation({ name: '', cnic: '', bloodType: '', units: '' });
+        setError('');
+        fetchDonations();
+      } catch (err) {
+        setError(err.response?.data?.message || 'Error submitting donation');
+      }
+    };
+
+    return (
+      <div className="dashboard">
+        <h2>Donor Dashboard</h2>
+        <div className="card">
+          <h3>Register New Donation</h3>
+          <form onSubmit={handleDonation}>
+            <div className="form-group">
+              <label>Name:</label>
+              <input
+                type="text"
+                value={newDonation.name}
+                onChange={(e) => setNewDonation({ ...newDonation, name: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <label>CNIC:</label>
+              <input
+                type="text"
+                value={newDonation.cnic}
+                onChange={(e) => setNewDonation({ ...newDonation, cnic: e.target.value })}
+                maxLength={15}
+                placeholder="12345-1234567-1"
+              />
+            </div>
+            <div className="form-group">
+              <label>Blood Type:</label>
+              <select
+                value={newDonation.bloodType}
+                onChange={(e) => setNewDonation({ ...newDonation, bloodType: e.target.value })}
+              >
+                <option value="">Select Blood Type</option>
+                <option value="A+">A+</option>
+                <option value="B+">B+</option>
+                <option value="O+">O+</option>
+                <option value="AB+">AB+</option>
+                <option value="A-">A-</option>
+                <option value="B-">B-</option>
+                <option value="O-">O-</option>
+                <option value="AB-">AB-</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label>Units:</label>
+              <input
+                type="number"
+                value={newDonation.units}
+                onChange={(e) => setNewDonation({ ...newDonation, units: e.target.value })}
+                min="1"
+              />
+            </div>
+            {error && <div className="error">{error}</div>}
+            <button type="submit" className="btn primary-btn">Submit Donation</button>
+          </form>
+        </div>
+        <div className="card">
+          <h3>My Donation History</h3>
+          <div className="list">
+            {donations.map((donation, index) => (
               <div key={index} className="list-item">
                 <p>Name: {donation.name} - CNIC: {donation.cnic}</p>
                 <p>Type: {donation.bloodType} - Units: {donation.units}</p>
-                <p>Date: {donation.date}</p>
+                <p>Date: {new Date(donation.date).toLocaleDateString()}</p>
               </div>
             ))}
+          </div>
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
-//donor class end
   const HospitalDashboard = () => {
     const [newRequest, setNewRequest] = useState({ bloodType: '', units: '' });
+    const [requests, setRequests] = useState([]);
 
-    const handleRequest = (e) => {
+    useEffect(() => {
+      fetchRequests();
+    }, []);
+
+    const fetchRequests = async () => {
+      try {
+        const response = await axios.get(`/hospitals/my-requests?userId=${currentUser.id}`);
+        setRequests(response.data);
+      } catch (err) {
+        console.error('Error fetching requests:', err);
+      }
+    };
+
+    const handleRequest = async (e) => {
       e.preventDefault();
       if (!newRequest.bloodType || !newRequest.units) {
         setError('Please fill in all fields');
         return;
       }
-      const request = {
-        ...newRequest,
-        hospitalEmail: currentUser?.email || '',
-        status: 'Pending',
-        date: new Date().toLocaleDateString(),
-      };
-      setRequests([...requests, request]);
-      setNewRequest({ bloodType: '', units: '' });
-      setError('');
+
+      try {
+        await axios.post('/hospitals/request', {
+          ...newRequest,
+          userId: currentUser.id
+        });
+        setNewRequest({ bloodType: '', units: '' });
+        setError('');
+        fetchRequests();
+      } catch (err) {
+        setError(err.response?.data?.message || 'Error submitting request');
+      }
     };
 
     return (
@@ -382,6 +414,10 @@ const AdminDashboard = () => {
                 <option value="B+">B+</option>
                 <option value="O+">O+</option>
                 <option value="AB+">AB+</option>
+                <option value="A-">A-</option>
+                <option value="B-">B-</option>
+                <option value="O-">O-</option>
+                <option value="AB-">AB-</option>
               </select>
             </div>
             <div className="form-group">
@@ -400,15 +436,12 @@ const AdminDashboard = () => {
         <div className="card">
           <h3>My Requests</h3>
           <div className="list">
-            {requests
-              .filter(request => request.hospitalEmail === currentUser?.email)
-              .map((request, index) => (
-                <div key={index} className="list-item">
-                  <p>Type: {request.bloodType} - Units: {request.units}</p>
-                  <p>Status: {request.status}</p>
-                  <p>Date: {request.date}</p>
-                </div>
-              ))}
+            {requests.map((request, index) => (
+              <div key={index} className="list-item">
+                <p>Type: {request.bloodType} - Units: {request.units}</p>
+                <p>Date: {new Date(request.date).toLocaleDateString()}</p>
+              </div>
+            ))}
           </div>
         </div>
       </div>
